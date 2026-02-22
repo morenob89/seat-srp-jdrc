@@ -30,18 +30,16 @@ class SrpController extends Controller
     private function getKillmailDetails(Request $request): array
     {
         // The submitted url is available at $request->km;
-        $url_parts = explode('/', rtrim($request->km, "/ \t\n\r\0\x0B"));
+        $url_parts = explode('/', trim($request->km, "/ \t\n\r\0\x0B"));
 
-        $token = $url_parts[5];
-        $hash = $url_parts[6];
+        $token = $url_parts[count($url_parts) - 2];
+        $hash = $url_parts[count($url_parts) - 1];
 
         $killmail = EveKillmail::firstOrCreate([
             'killmail_id' => $token,
         ], [
             'killmail_hash' => $hash,
         ]);
-
-        // dd($killmail);
 
         if (! KillmailDetail::find($killmail->killmail_id))
         {
@@ -92,7 +90,6 @@ class SrpController extends Controller
 
     public function srpSaveKillMail(AddKillMail $request)
     {
-        // $quote = Quote::with('killmail')->get($request->srpQuoteID); //TODO!!
         $quote = Quote::find($request->input('srpQuoteID'));
 
         if ($quote->user !== $request->user()->id){
