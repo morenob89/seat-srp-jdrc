@@ -6,7 +6,6 @@ use CryptaTech\Seat\SeatSrp\Enum\SRPCategoryEnum;
 use CryptaTech\Seat\SeatSrp\Items\PriceableSRPItem;
 use CryptaTech\Seat\SeatSrp\Models\AdvRule;
 use CryptaTech\Seat\SeatSrp\Models\Eve\Insurance;
-use CryptaTech\Seat\SeatSrp\Models\Sde\InvFlag;
 use Illuminate\Support\Collection;
 use RecursiveTree\Seat\PricesCore\Exceptions\PriceProviderException;
 use RecursiveTree\Seat\PricesCore\Facades\PriceProviderSystem;
@@ -22,8 +21,50 @@ trait SrpManager
     ];
     public static $CARGO_FLAGS = [5, 90, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 148, 149, 151, 155, 176, 177, 179];
 
+    /**
+     * Static map of EVE inventory flag IDs to their flag names.
+     *
+     * This replaces the previous lookup against the legacy `invFlags` SDE table,
+     * which is no longer seeded by modern SeAT (eveapi 5.x/6.x ship no invFlags
+     * seeder or migration). When that table is empty, InvFlag::find() returned
+     * null and reading ->flagName threw a fatal error on every killmail with
+     * fitted items, surfacing to the user as "Invalid killmail address".
+     *
+     * Flag IDs are static in EVE, so a hard-coded map is safe. Only the flags
+     * whose names drive the slot display switch are listed here; any other flag
+     * (e.g. specialised holds) resolves to null and is still priced, just not
+     * placed into a named slot — matching the previous behaviour.
+     */
+    public static $FLAG_NAMES = [
+        5 => 'Cargo',
+        11 => 'LoSlot0', 12 => 'LoSlot1', 13 => 'LoSlot2', 14 => 'LoSlot3',
+        15 => 'LoSlot4', 16 => 'LoSlot5', 17 => 'LoSlot6', 18 => 'LoSlot7',
+        19 => 'MedSlot0', 20 => 'MedSlot1', 21 => 'MedSlot2', 22 => 'MedSlot3',
+        23 => 'MedSlot4', 24 => 'MedSlot5', 25 => 'MedSlot6', 26 => 'MedSlot7',
+        27 => 'HiSlot0', 28 => 'HiSlot1', 29 => 'HiSlot2', 30 => 'HiSlot3',
+        31 => 'HiSlot4', 32 => 'HiSlot5', 33 => 'HiSlot6', 34 => 'HiSlot7',
+        87 => 'DroneBay',
+        92 => 'RigSlot0', 93 => 'RigSlot1', 94 => 'RigSlot2', 95 => 'RigSlot3',
+        96 => 'RigSlot4', 97 => 'RigSlot5', 98 => 'RigSlot6', 99 => 'RigSlot7',
+        125 => 'SubSystemSlot0', 126 => 'SubSystemSlot1', 127 => 'SubSystemSlot2', 128 => 'SubSystemSlot3',
+        129 => 'SubSystemSlot4', 130 => 'SubSystemSlot5', 131 => 'SubSystemSlot6', 132 => 'SubSystemSlot7',
+        158 => 'FighterBay',
+        159 => 'FighterTube0', 160 => 'FighterTube1', 161 => 'FighterTube2', 162 => 'FighterTube3', 163 => 'FighterTube4',
+        // Flags that were historically missing from the SDE and previously patched
+        // in by the `srp:glue:flag` (FlagShim) command; included here so the map is
+        // fully self-contained and that command is no longer required.
+        179 => 'FrigateBay', 180 => 'CoreRoom',
+    ];
+
     private function srpPopulateSlots(Killmail $killMail): array
     {
+        // Guard against a killmail whose victim/detail data failed to load from
+        // ESI. Without this, dereferencing $killMail->victim below would throw a
+        // cryptic "property on null" error.
+        if (is_null($killMail->victim)) {
+            throw new \RuntimeException('Killmail details are not available yet (victim data missing). The killmail may still be loading from ESI — please try again shortly.');
+        }
+
         $priceList = [];
         $slots = [
             'killId' => 0,
@@ -36,12 +77,17 @@ trait SrpManager
         // dd($killMail->victim->items);
         foreach ($killMail->victim->items as $item) {
             $searchedItem = $item;
-            $slotName = InvFlag::find($item->pivot->flag);
+            // Resolve the slot name from a static map instead of the legacy
+            // `invFlags` table. Unknown flags resolve to null (still priced below).
+            $flagName = self::$FLAG_NAMES[$item->pivot->flag] ?? null;
             if (! is_object($searchedItem)) {
             } else {
                 $priceitem = array_key_exists($searchedItem->typeID, $priceList) ? $priceList[$searchedItem->typeID] : new PriceableSRPItem($searchedItem, $item->pivot->flag, 0);
 
-                switch ($slotName->flagName) {
+                switch ($flagName) {
+                    case null:
+                        // Unknown/unmapped flag: price it, but don't place it in a named slot.
+                        break;
                     case 'Cargo':
                         $slots['cargo'][$searchedItem->typeID]['name'] = $searchedItem->typeName;
                         if (! isset($slots['cargo'][$searchedItem->typeID]['qty']))
@@ -62,14 +108,14 @@ trait SrpManager
                         break;
                     default:
                         if (! preg_match('/(Charge|Script|[SML])$/', $searchedItem->typeName)) {
-                            $slots[$slotName->flagName]['id'] = $searchedItem->typeID;
-                            $slots[$slotName->flagName]['name'] = $searchedItem->typeName;
-                            if (! isset($slots[$slotName->flagName]['qty']))
-                                $slots[$slotName->flagName]['qty'] = 0;
+                            $slots[$flagName]['id'] = $searchedItem->typeID;
+                            $slots[$flagName]['name'] = $searchedItem->typeName;
+                            if (! isset($slots[$flagName]['qty']))
+                                $slots[$flagName]['qty'] = 0;
                             if (! is_null($item->pivot->quantity_destroyed))
-                                $slots[$slotName->flagName]['qty'] += $item->pivot->quantity_destroyed;
+                                $slots[$flagName]['qty'] += $item->pivot->quantity_destroyed;
                             if (! is_null($item->pivot->quantity_dropped))
-                                $slots[$slotName->flagName]['qty'] += $item->pivot->quantity_dropped;
+                                $slots[$flagName]['qty'] += $item->pivot->quantity_dropped;
                         }
                         break;
                 }
@@ -155,28 +201,29 @@ trait SrpManager
             };
         }
 
-        // Hydrate all the prices
-        try {
-            PriceProviderSystem::getPrices($rule->price_source, $priceList);
-        } catch (PriceProviderException $e) {
-            return [
-                'price' => 0,
-                'rule' => $rule->rule_type,
-                'error' => $e->getMessage(),
-                'source' => $source,
-                'base_value' => $base_value,
-                'hull_percent' => $hull_percent,
-                'fit_percent' => $fit_percent,
-                'cargo_percent' => $cargo_percent,
-                'deduct_insurance' => $deduct_insurance,
-            ];
-            // return redirect()->back()->with("error", "Failed to get prices from price provider: $message");
-        }
+        // Hydrate all the prices from the configured price provider.
+        //
+        // Pricing is optional. If no price provider is configured, or the provider
+        // fails for any reason, we fall back to "manual pricing" (0 ISK) instead of
+        // blocking the request. This lets pilots still submit an SRP request and
+        // have the payout decided manually in-game.
+        $value = 0;
 
-        $value = $priceList->sum(function (PriceableSRPItem $item) {
-            // Log::warning([$item->getTypeID(), $item->type()->typeName, $item->getPrice(), $item->getAmount(), $item->getSRPPrice()]);
-            return $item->getSRPPrice();
-        });
+        if (empty($source)) {
+            logger()->info('SRP: no price provider configured — using manual pricing (0 ISK).');
+        } else {
+            try {
+                PriceProviderSystem::getPrices($source, $priceList);
+
+                $value = $priceList->sum(function (PriceableSRPItem $item) {
+                    // Log::warning([$item->getTypeID(), $item->type()->typeName, $item->getPrice(), $item->getAmount(), $item->getSRPPrice()]);
+                    return $item->getSRPPrice();
+                });
+            } catch (PriceProviderException $e) {
+                logger()->warning('SRP: price provider failed — falling back to manual pricing (0 ISK). ' . $e->getMessage());
+                $value = 0;
+            }
+        }
         // dd($priceList, $value);
 
         $total = $value + $base_value;
