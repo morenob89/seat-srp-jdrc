@@ -1,6 +1,8 @@
 # seat-srp
 A module for SeAT that tracks SRP requests
 
+## THIS IS A FORK OF ORIGINAL SEAT-SRP MADE FOR JDRC CORP
+
 This plugin write for [SeAT](https://github.com/eveseat/seat) is providing to your instance a way to manage your ship replacement program (SRP)
 
 [![Latest Stable Version](https://img.shields.io/packagist/v/cryptatech/seat-srp.svg?style=flat-square)]()
