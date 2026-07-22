@@ -5,15 +5,16 @@
 
 @push('head')
 <style>
-    .srp-payout-cell .srp-payout-input { display: none; }
+    .srp-payout-cell .srp-payout-input { display: none !important; }
     tr.editing .srp-payout-cell .srp-payout-value { display: none; }
-    tr.editing .srp-payout-cell .srp-payout-input { display: inline-block; }
+    tr.editing .srp-payout-cell .srp-payout-input { display: inline-block !important; }
     tr.editing .srp-edit-btn { display: none; }
     .srp-edit-actions { display: none; }
     tr.editing .srp-edit-actions { display: inline-flex; }
     .srp-payout-input { max-width: 160px; }
     .srp-meta-row td { background: rgba(0,0,0,.03); font-weight: 600; }
     .srp-edited-badge { font-size: .7rem; }
+    .srp-edit-btn { display: inline-flex; align-items: center; gap: .35rem; }
 </style>
 @endpush
 
@@ -76,7 +77,7 @@
                                         </span>
                                         @if($canEdit)
                                             <input type="number" min="0" step="any"
-                                                   class="form-control form-control-sm text-right srp-payout-input d-inline-block"
+                                                   class="form-control form-control-sm text-right srp-payout-input"
                                                    value="{{ $value }}" />
                                         @endif
                                     </td>

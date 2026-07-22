@@ -43,6 +43,11 @@ class SrpServiceProvider extends AbstractSeatPlugin
 
         $entries = config('package.sidebar.srp.entries', []);
 
+        // Idempotent: boot() can run more than once per lifecycle, so bail if the
+        // entry is already present rather than appending a duplicate tab.
+        if (collect($entries)->contains(fn ($entry) => ($entry['route'] ?? null) === 'srp.payouts'))
+            return;
+
         $payouts = [
             'name' => 'SRP Payouts',
             'icon' => 'fas fa-coins',
