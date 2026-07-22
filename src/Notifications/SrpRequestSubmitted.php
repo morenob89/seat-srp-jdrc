@@ -38,11 +38,15 @@ class SrpRequestSubmitted extends Notification
         $uid = $notifiable->user_id;
         $user = User::where('id', $uid)->first();
 
+        $operationTypes = config('srp.payouts.operation_types') ?? [];
+        $srpType = $operationTypes[$notifiable->srp_type] ?? ($notifiable->srp_type ? ucfirst($notifiable->srp_type) : 'N/A');
+
         return (new Discord)->post('```New SRP Request Received:```' .
             "\t**Requested On:** $notifiable->created_at" .
             "\n\t**Requested By:** " . $user->name .
             "\n\t**Kill Mail for:** $notifiable->character_name" .
             "\n\t**Ship Type:** $notifiable->ship_type" .
+            "\n\t**SRP Type:** " . $srpType .
             "\n\t**Cost:** " . number_format($notifiable->cost)
         );
     }

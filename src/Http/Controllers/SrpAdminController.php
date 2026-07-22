@@ -4,6 +4,7 @@ namespace CryptaTech\Seat\SeatSrp\Http\Controllers;
 
 use CryptaTech\Seat\SeatSrp\Http\DataTables\GroupRulesDataTable;
 use CryptaTech\Seat\SeatSrp\Http\DataTables\TypeRulesDataTable;
+use CryptaTech\Seat\SeatSrp\Helpers\SrpPayouts;
 use CryptaTech\Seat\SeatSrp\Models\AdvRule;
 use CryptaTech\Seat\SeatSrp\Models\KillMail;
 use CryptaTech\Seat\SeatSrp\Models\Quote;
@@ -237,5 +238,34 @@ class SrpAdminController extends Controller
         Quote::truncate();
 
         return redirect()->back()->with('success', 'Quotes Truncated');
+    }
+
+    public function savePayout($rowKey, Request $request)
+    {
+        $opTypes = array_keys(SrpPayouts::operationTypes());
+
+        $rules = [];
+        foreach ($opTypes as $opType) {
+            $rules[$opType] = 'nullable|numeric|min:0';
+        }
+        $validated = $request->validate($rules);
+
+        if (! SrpPayouts::saveRow($rowKey, $validated)) {
+            return response()->json(['msg' => sprintf('Unknown payout row "%s"', $rowKey)], 404);
+        }
+
+        $row = collect(SrpPayouts::rows())->firstWhere('key', $rowKey);
+
+        return response()->json([
+            'key' => $rowKey,
+            'row' => $row,
+        ]);
+    }
+
+    public function resetPayouts()
+    {
+        setting([SrpPayouts::SETTING_KEY, json_encode([])], true);
+
+        return redirect()->back()->with('success', 'SRP payout table reset to code defaults.');
     }
 }

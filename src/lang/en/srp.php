@@ -38,6 +38,16 @@ return [
     'add' => 'Add',
     'remove' => 'Remove',
 
+    'payouts' => 'SRP Payouts',
+    'payouts_desc' => 'Fixed ISK payout matrix by ship class and operation type.',
+    'payouts_edit' => 'Edit',
+    'payouts_save' => 'Save',
+    'payouts_cancel' => 'Cancel',
+    'payouts_reset' => 'Reset to defaults',
+    'payouts_reset_confirm' => 'Reset the whole payout table back to the hardcoded defaults? This clears all admin edits.',
+    'payouts_manual' => 'Manual',
+    'payouts_edited' => 'edited',
+
     'op_type' => 'Operation Type',
     'ship_class' => 'Ship Class',
     'ship_class_help' => 'Auto-detected on verify — change it if wrong; pick Pod or Entosis manually.',

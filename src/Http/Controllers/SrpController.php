@@ -193,4 +193,19 @@ class SrpController extends Controller
     {
         return view('srp::instructions');
     }
+
+    public function getPayoutsView()
+    {
+        // The payout table only exists in Flat / Matrix mode.
+        if (setting('cryptatech_seat_srp_advanced_srp', true) != '2') {
+            return redirect()->route('srp.request')
+                ->with('error', 'The payout table is only available when SRP is in Flat / Matrix mode.');
+        }
+
+        $operationTypes = \CryptaTech\Seat\SeatSrp\Helpers\SrpPayouts::operationTypes();
+        $rows = collect(\CryptaTech\Seat\SeatSrp\Helpers\SrpPayouts::rows())->groupBy('meta');
+        $canEdit = auth()->user()->can('srp.settings');
+
+        return view('srp::payouts', compact('operationTypes', 'rows', 'canEdit'));
+    }
 }

@@ -184,11 +184,13 @@ trait SrpManager
      */
     private function srpGetFlatPrice(Killmail $killmail, ?string $rowKey, string $opType): array
     {
-        $config = config('srp.payouts') ?? [];
-        $rows = collect($config['rows'] ?? []);
+        // Rows carry admin overrides (from the SRP Payouts page) merged over the
+        // config defaults; operation types come straight from config.
+        $rows = collect(SrpPayouts::rows());
+        $operationTypes = SrpPayouts::operationTypes();
 
         // Validate the operation type -> column; default to peacetime.
-        if (! array_key_exists($opType, $config['operation_types'] ?? [])) {
+        if (! array_key_exists($opType, $operationTypes)) {
             $opType = 'peacetime';
         }
 

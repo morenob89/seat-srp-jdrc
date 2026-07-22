@@ -146,6 +146,24 @@ Route::group([
             'middleware' => 'can:srp.request',
         ]);
 
+        Route::get('/payouts', [
+            'as' => 'srp.payouts',
+            'uses' => 'SrpController@getPayoutsView',
+            'middleware' => 'can:srp.request',
+        ]);
+
+        Route::post('/payouts/reset', [
+            'as' => 'srp.payouts.reset',
+            'uses' => 'SrpAdminController@resetPayouts',
+            'middleware' => 'can:srp.settings',
+        ]);
+
+        Route::post('/payouts/{rowKey}', [
+            'as' => 'srp.payouts.save',
+            'uses' => 'SrpAdminController@savePayout',
+            'middleware' => 'can:srp.settings',
+        ]);
+
         Route::get('/test', [
             'as' => 'srp.testsrp',
             'uses' => 'SrpAdminController@getTestView',

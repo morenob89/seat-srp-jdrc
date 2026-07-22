@@ -23,6 +23,42 @@ class SrpServiceProvider extends AbstractSeatPlugin
         $this->add_migrations();
         $this->add_translations();
         $this->apply_custom_configuration();
+        $this->add_dynamic_sidebar();
+    }
+
+    /**
+     * The "SRP Payouts" tab is only meaningful in Flat / Matrix mode, so it is
+     * injected into the sidebar at runtime rather than living in the static
+     * sidebar config. Wrapped defensively: the settings table may not exist yet
+     * during install/migration.
+     */
+    private function add_dynamic_sidebar()
+    {
+        try {
+            if (setting('cryptatech_seat_srp_advanced_srp', true) != '2')
+                return;
+        } catch (\Throwable $e) {
+            return;
+        }
+
+        $entries = config('package.sidebar.srp.entries', []);
+
+        $payouts = [
+            'name' => 'SRP Payouts',
+            'icon' => 'fas fa-coins',
+            'route' => 'srp.payouts',
+            'permission' => 'srp.request',
+        ];
+
+        // Place it right after the "Request" entry when present, else append.
+        $index = collect($entries)->search(fn ($entry) => ($entry['route'] ?? null) === 'srp.request');
+        if ($index === false) {
+            $entries[] = $payouts;
+        } else {
+            array_splice($entries, $index + 1, 0, [$payouts]);
+        }
+
+        config(['package.sidebar.srp.entries' => $entries]);
     }
 
     /**
