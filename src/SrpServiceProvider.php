@@ -131,7 +131,7 @@ class SrpServiceProvider extends AbstractSeatPlugin
      */
     public function getPackageRepositoryUrl(): string
     {
-        return 'https://github.com/eveseat-plugins/seat-srp';
+        return 'https://github.com/morenob89/seat-srp-jdrc';
     }
 
     /**
@@ -143,7 +143,7 @@ class SrpServiceProvider extends AbstractSeatPlugin
      */
     public function getPackagistPackageName(): string
     {
-        return 'seat-srp';
+        return 'seat-srp-jdrc';
     }
 
     /**
@@ -155,6 +155,6 @@ class SrpServiceProvider extends AbstractSeatPlugin
      */
     public function getPackagistVendorName(): string
     {
-        return 'cryptatech';
+        return 'morenob89';
     }
 }

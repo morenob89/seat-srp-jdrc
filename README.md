@@ -1,20 +1,19 @@
-# seat-srp
+# seat-srp-jdrc
 A module for SeAT that tracks SRP requests
 
 ## THIS IS A FORK OF ORIGINAL SEAT-SRP MADE FOR JDRC CORP
 
-This plugin write for [SeAT](https://github.com/eveseat/seat) is providing to your instance a way to manage your ship replacement program (SRP)
+> **Note:** This project was originally [eveseat-plugins/seat-srp](https://github.com/eveseat-plugins/seat-srp) (published as `cryptatech/seat-srp`). It has since been forked, modified, and is now maintained by **morenob89** at [morenob89/seat-srp-jdrc](https://github.com/morenob89/seat-srp-jdrc) for use by **JDRC** only. Full credit for the original work goes to the upstream authors.
 
-[![Latest Stable Version](https://img.shields.io/packagist/v/cryptatech/seat-srp.svg?style=flat-square)]()
-[![License](https://img.shields.io/badge/license-GPLv2-blue.svg?style=flat-square)](https://raw.githubusercontent.com/eveseat-plugins/seat-srp/master/LICENSE)
+This plugin, written for [SeAT](https://github.com/eveseat/seat), provides your instance with a way to manage your ship replacement program (SRP).
 
-If you have issues with this, you can contact me on Eve as **Crypta Electrica**, or on email as 'crypta@crypta.tech'
+[![License](https://img.shields.io/badge/license-GPLv2-blue.svg?style=flat-square)](https://raw.githubusercontent.com/morenob89/seat-srp-jdrc/master/LICENSE)
 
 ## Quick Installation:
 
 Please see the SeAT docs for installation instructions [HERE](https://eveseat.github.io/docs/community_packages/).
 
-The composer string to use is `cryptatech/seat-srp`
+The composer string to use is `morenob89/seat-srp-jdrc`
 
 And now, when you log into SeAT, you should see a 'Ship Replacement Program' link on the left.
 
