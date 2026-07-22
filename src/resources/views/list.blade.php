@@ -73,14 +73,29 @@
                   User Missing
                   @endif
                   </td>
-                  <td>{{ $kill->ship_type }}</td>
                   <td>
-                      <button type="button" class="btn btn-xs btn-link" data-toggle="modal" data-target="#insurances" data-kill-id="{{ $kill->kill_id }}">
+                      {{ $kill->ship_type }}
+                      @if($kill->srp_class)
+                      <small class="d-block text-muted">{{ ucfirst($kill->srp_type) }} &middot; {{ $kill->srp_class }}</small>
+                      @endif
+                  </td>
+                  <td>
+                      <button type="button" id="cost-display-{{ $kill->kill_id }}" class="btn btn-xs btn-link" data-toggle="modal" data-target="#insurances" data-kill-id="{{ $kill->kill_id }}">
                           {{ number_format($kill->cost, 2) }} ISK
                       </button>
                      <button type="button" class="copyText btn btn-xs btn-link" title="Copy price to clipboard" data-text-to-copy="{{ $kill->cost }}">
                         <i class="fa fa-copy"></i>
                      </button>
+                     @can('srp.settle')
+                     <div class="input-group input-group-sm mt-1 srp-cost-edit" style="max-width: 220px;">
+                         <input type="number" min="0" step="any" class="form-control srp-cost-input" value="{{ $kill->cost }}" data-kill-id="{{ $kill->kill_id }}" title="Override payout amount" />
+                         <div class="input-group-append">
+                             <button type="button" class="btn btn-outline-secondary srp-cost-save" data-kill-id="{{ $kill->kill_id }}" title="Save override">
+                                 <i class="fas fa-save"></i>
+                             </button>
+                         </div>
+                     </div>
+                     @endcan
                   </td>
                   @if ($kill->approved === 0)
                     <td id="id-{{ $kill->kill_id }}"><span class="badge badge-warning">Pending</span></td>
@@ -157,7 +172,12 @@
                   User Missing
                   @endif
                   </td>
-                  <td>{{ $kill->ship_type }}</td>
+                  <td>
+                      {{ $kill->ship_type }}
+                      @if($kill->srp_class)
+                      <small class="d-block text-muted">{{ ucfirst($kill->srp_type) }} &middot; {{ $kill->srp_class }}</small>
+                      @endif
+                  </td>
                   <td>
                       <button type="button" class="btn btn-xs btn-link" data-toggle="modal" data-target="#insurances" data-kill-id="{{ $kill->kill_id }}">
                           {{ number_format($kill->cost, 2) }} ISK
@@ -350,7 +370,7 @@
         table.destroy();
     });
 
-    $('#srps tbody').on('click', 'button', function(btn) {
+    $('#srps tbody').on('click', 'button.srp-status', function(btn) {
         $.ajax({
           headers: function() {},
           url: "{{ route('srpadmin.list') }}/" + btn.target.name + "/" + $(btn.target).text(),
@@ -372,7 +392,7 @@
         });
     });
 
-    $('#srps-arch tbody').on('click', 'button', function(btn) {
+    $('#srps-arch tbody').on('click', 'button.srp-status', function(btn) {
         $.ajax({
           headers: function() {},
           url: "{{ route('srpadmin.list') }}/" + btn.target.name + "/" + $(btn.target).text(),
@@ -387,6 +407,31 @@
 
    $('.copyText').on('click', function() {
       navigator.clipboard.writeText($(this).data('text-to-copy'));
+   });
+
+   // SRP admin: override the payout amount for a request.
+   $('#srps tbody').on('click', '.srp-cost-save', function(e) {
+      e.stopPropagation();
+      var killId = $(this).data('kill-id');
+      var input = $('.srp-cost-input[data-kill-id="' + killId + '"]');
+      $.ajax({
+         type: 'POST',
+         url: "{{ route('srpadmin.list') }}/" + killId + "/cost",
+         data: { cost: input.val() },
+         headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
+         dataType: 'json',
+         timeout: 5000
+      }).done(function(data) {
+         var formatted = parseFloat(data.cost).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+         });
+         $('#cost-display-' + killId).text(formatted + ' ISK');
+         $('#approver-' + killId).text(data.approver);
+         input.removeClass('is-invalid').addClass('is-valid');
+      }).fail(function() {
+         input.removeClass('is-valid').addClass('is-invalid');
+      });
    });
 });
 </script>

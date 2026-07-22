@@ -3,6 +3,7 @@
 namespace CryptaTech\Seat\SeatSrp\Helpers;
 
 use CryptaTech\Seat\SeatSrp\Enum\SRPCategoryEnum;
+use CryptaTech\Seat\SeatSrp\Helpers\ShipClassifier;
 use CryptaTech\Seat\SeatSrp\Items\PriceableSRPItem;
 use CryptaTech\Seat\SeatSrp\Models\AdvRule;
 use CryptaTech\Seat\SeatSrp\Models\Eve\Insurance;
@@ -56,7 +57,7 @@ trait SrpManager
         179 => 'FrigateBay', 180 => 'CoreRoom',
     ];
 
-    private function srpPopulateSlots(Killmail $killMail): array
+    private function srpPopulateSlots(Killmail $killMail, string $opType = 'peacetime', ?string $rowKey = null): array
     {
         // Guard against a killmail whose victim/detail data failed to load from
         // ESI. Without this, dereferencing $killMail->victim below would throw a
@@ -138,7 +139,7 @@ trait SrpManager
 
         $priceList = collect($priceList);
 
-        $prices = $this->srpGetPrice($killMail, $priceList);
+        $prices = $this->srpGetPrice($killMail, $priceList, $opType, $rowKey);
 
         $pilot = CharacterInfo::find($killMail->victim->character_id);
 
@@ -152,15 +153,68 @@ trait SrpManager
         return $slots;
     }
 
-    private function srpGetPrice(Killmail $killmail, Collection $priceList): array
+    private function srpGetPrice(Killmail $killmail, Collection $priceList, string $opType = 'peacetime', ?string $rowKey = null): array
     {
-        // Switching logic between advanced and simple rules
-        // Try advanced first, becasue if the setting hasnt been set it will be empty.
-        if (setting('cryptatech_seat_srp_advanced_srp', true) == '1') {
+        // Switching logic between the pricing modes.
+        //   '2' = flat / matrix (JDRC fixed payout table)
+        //   '1' = advanced (percentage-of-value rules)
+        //   else = simple (whole killmail value)
+        // Advanced is tried before simple because if the setting has never been
+        // set it will be empty and simple is the safe default.
+        $mode = setting('cryptatech_seat_srp_advanced_srp', true);
+
+        if ($mode == '2') {
+            return $this->srpGetFlatPrice($killmail, $rowKey, $opType);
+        }
+
+        if ($mode == '1') {
             return $this->srpGetAdvancedPrice($killmail, $priceList);
         }
 
         return $this->srpGetSimplePrice($killmail, $priceList);
+    }
+
+    /**
+     * Flat / Matrix pricing: pay a fixed ISK amount from config('srp.payouts')
+     * based on the ship-class row and the chosen operation-type column. Ignores
+     * item prices entirely — no price provider is consulted.
+     *
+     * @param  string|null  $rowKey  the pilot's chosen matrix row, or null to auto-classify
+     * @param  string  $opType  the operation-type column key (peacetime|strategic)
+     */
+    private function srpGetFlatPrice(Killmail $killmail, ?string $rowKey, string $opType): array
+    {
+        $config = config('srp.payouts') ?? [];
+        $rows = collect($config['rows'] ?? []);
+
+        // Validate the operation type -> column; default to peacetime.
+        if (! array_key_exists($opType, $config['operation_types'] ?? [])) {
+            $opType = 'peacetime';
+        }
+
+        // Resolve the row: an explicit, valid pilot choice wins; otherwise
+        // auto-classify the hull. classify() always returns a valid key.
+        if (is_null($rowKey) || is_null($rows->firstWhere('key', $rowKey))) {
+            $rowKey = ShipClassifier::classify($killmail->victim->ship_type_id ?? null);
+        }
+
+        $row = $rows->firstWhere('key', $rowKey);
+
+        // Defensive: if the matrix somehow lacks the resolved key, fall back.
+        if (is_null($row)) {
+            $rowKey = ShipClassifier::FALLBACK;
+            $row = $rows->firstWhere('key', $rowKey);
+        }
+
+        $price = $row ? (float) ($row[$opType] ?? 0) : 0.0;
+
+        return [
+            'price' => round($price, 2),
+            'error' => 'None',
+            'rule' => 'flat',
+            'srp_type' => $opType,
+            'srp_class' => $rowKey,
+        ];
     }
 
     private function srpGetAdvancedPrice(Killmail $killmail, Collection $priceList): array

@@ -20,6 +20,31 @@
                 <input type="text" class="form-control" id="killMailUrl" name="killMailUrl" placeholder="https://esi.tech.ccp.is/v1/killmails/9999999/sidufhus6f4654fdsdf4/?datasource=tranquility" />
                 <span class="help-block" style="display: none;">Invalid killmail address</span>
             </div>
+            @if(setting('cryptatech_seat_srp_advanced_srp', true) == '2')
+            <div class="form-group">
+                <label for="srpOpType" class="control-label">{{ trans('srp::srp.op_type') }}</label>
+                <select class="form-control" id="srpOpType" name="srpOpType">
+                    @foreach(config('srp.payouts.operation_types', []) as $opKey => $opLabel)
+                    <option value="{{ $opKey }}">{{ $opLabel }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="srpClass" class="control-label">{{ trans('srp::srp.ship_class') }}
+                    <small class="text-muted d-block">{{ trans('srp::srp.ship_class_help') }}</small>
+                </label>
+                <select class="form-control" id="srpClass" name="srpClass">
+                    <option value="">{{ trans('srp::srp.ship_class_auto') }}</option>
+                    @foreach(collect(config('srp.payouts.rows', []))->groupBy('meta') as $meta => $rows)
+                    <optgroup label="{{ $meta }}">
+                        @foreach($rows as $row)
+                        <option value="{{ $row['key'] }}">{{ $row['hull'] }}</option>
+                        @endforeach
+                    </optgroup>
+                    @endforeach
+                </select>
+            </div>
+            @endif
             <div class="form-group">
                 <label for="srpPingContent">{{ trans('srp::srp.ping') }}</label>
                 <textarea class="form-control" name="srpPingContent" rows="3" placeholder="{{ trans('srp::srp.ping_info') }}"></textarea>
@@ -336,7 +361,12 @@
     $('#kill-report').hide();
     $('#saveKillMail').hide();
 
-    $('#readUrl').on('click', function() {
+    function verifyKillmail() {
+        var url = $('#killMailUrl').val();
+        if (!url) {
+            return;
+        }
+
         $('.overlay').show();
         kmFormGroup = $('#killMailUrl').parent('div.form-group');
         kmFormGroup.find('span.help-block').hide();
@@ -349,7 +379,9 @@
             headers: function() {},
             url: "{{ route('srp.getKillMailQuote') }}",
             dataType: 'json',
-            data: 'km=' + encodeURIComponent($('#killMailUrl').val()),
+            data: 'km=' + encodeURIComponent(url) +
+                '&srpOpType=' + encodeURIComponent($('#srpOpType').val() || '') +
+                '&srpClass=' + encodeURIComponent($('#srpClass').val() || ''),
             timeout: 10000,
         }).done(function(result) {
             $('.overlay').hide();
@@ -357,6 +389,12 @@
             if (result) {
                 $('#kill-report').show();
                 $('#saveKillMail').show();
+
+                // Pre-select the resolved (auto-detected or confirmed) ship class.
+                if (result["srpClass"]) {
+                    $('#srpClass').val(result["srpClass"]);
+                }
+
                 for (var slot in result) {
 
                     if (slot.indexOf('HiSlot') >= 0)
@@ -410,6 +448,16 @@
             kmFormGroup.addClass('has-error');
             kmFormGroup.find('span.help-block').show();
         });
+    }
+
+    $('#readUrl').on('click', verifyKillmail);
+
+    // Re-price when the pilot changes the operation type or corrects the ship
+    // class, but only after an initial verify (a quote already exists).
+    $('#srpOpType, #srpClass').on('change', function() {
+        if ($('#srpQuoteID').val()) {
+            verifyKillmail();
+        }
     });
     ids_to_names();
 </script>

@@ -62,6 +62,25 @@
                                 @endif
                                 <label class="form-check-label" for="method2">Advanced</label>
                             </div>
+                            <div class="form-check form-check-inline">
+                                @if (setting('cryptatech_seat_srp_advanced_srp', true) == "2")
+                                <input class="form-check-input" type="radio" name="srp_method" id="method3" value="2" checked>
+                                @else
+                                <input class="form-check-input" type="radio" name="srp_method" id="method3" value="2">
+                                @endif
+                                <label class="form-check-label" for="method3">Flat / Matrix</label>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label">Flat / Matrix Payouts</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-plaintext text-muted mb-0">
+                                    In Flat / Matrix mode, payouts come from the fixed table defined in code
+                                    (<code>src/Config/srp.payouts.php</code>). Pilots pick an operation type
+                                    (Peacetime / Strategic) when requesting; the ship class is auto-detected and
+                                    can be corrected. SRP admins can override any payout on the Approval page.
+                                </p>
+                            </div>
                         </div>
                         <div class="form-group row">
                             <label for="srp_delete" class="col-sm-3 col-form-label">Process Pending Deletions</label>

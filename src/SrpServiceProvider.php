@@ -59,6 +59,9 @@ class SrpServiceProvider extends AbstractSeatPlugin
             __DIR__ . '/Config/srp.config.php', 'srp.config');
 
         $this->mergeConfigFrom(
+            __DIR__ . '/Config/srp.payouts.php', 'srp.payouts');
+
+        $this->mergeConfigFrom(
             __DIR__ . '/Config/srp.sidebar.php', 'package.sidebar');
 
         $this->registerPermissions(

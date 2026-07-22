@@ -22,6 +22,8 @@ class AddKillMail extends FormRequest
             'srpTypeId' => 'required|integer',
             'srpPingContent' => 'nullable|string',
             'srpQuoteID' => 'required|int|exists:cryptatech_seat_quotes,id',
+            'srpOpType' => 'nullable|string',
+            'srpClass' => 'nullable|string',
         ];
     }
 }

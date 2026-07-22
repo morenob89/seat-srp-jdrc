@@ -27,6 +27,11 @@ return [
     'ship' => '船',
     'cost' => '花费',
 
+    'op_type' => 'Operation Type',
+    'ship_class' => 'Ship Class',
+    'ship_class_help' => 'Auto-detected on verify — change it if wrong; pick Pod or Entosis manually.',
+    'ship_class_auto' => 'Auto-detect from killmail',
+
     'low_slot_mod' => '低槽',
     'mid_slot_mod' => '中槽',
     'hi_slot_mod' => '高槽',

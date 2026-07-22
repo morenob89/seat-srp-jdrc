@@ -14,6 +14,7 @@ use CryptaTech\Seat\SeatSrp\Validation\ValidateSettings;
 use Seat\Eveapi\Jobs\Killmails\Detail;
 use Seat\Eveapi\Models\Killmails\Killmail as EveKillmail;
 use Seat\Eveapi\Models\Killmails\KillmailDetail;
+use Illuminate\Http\Request;
 use Seat\Eveapi\Models\Sde\InvGroup;
 use Seat\Eveapi\Models\Sde\InvType;
 use Seat\Web\Http\Controllers\Controller;
@@ -52,6 +53,28 @@ class SrpAdminController extends Controller
         $killmail->save();
 
         return json_encode(['name' => $action, 'value' => $kill_id, 'approver' => auth()->user()->name]);
+    }
+
+    public function srpUpdateCost($kill_id, Request $request)
+    {
+        $request->validate([
+            'cost' => 'required|numeric|min:0',
+        ]);
+
+        $killmail = KillMail::find($kill_id);
+
+        if (is_null($killmail))
+            return response()->json(['msg' => sprintf('Unable to retrieve kill %s', $kill_id)], 404);
+
+        $killmail->cost = $request->input('cost');
+        $killmail->approver = auth()->user()->name;
+        $killmail->save();
+
+        return response()->json([
+            'kill_id' => $kill_id,
+            'cost' => $killmail->cost,
+            'approver' => auth()->user()->name,
+        ]);
     }
 
     public function srpAddReason(AddReason $request)

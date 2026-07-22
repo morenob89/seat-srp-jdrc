@@ -19,7 +19,7 @@ And now, when you log into SeAT, you should see a 'Ship Replacement Program' lin
 
 ## Price Provider Setup
 
-In order to use this plugin you must have configured at least one PriceProvider. See [here](https://github.com/recursivetree/seat-prices-core) for available providers.
+For the **Simple** and **Advanced** payout modes (which price losses from market value), you must have configured at least one PriceProvider. See [here](https://github.com/recursivetree/seat-prices-core) for available providers. The **Flat / Matrix** mode (see below) pays from a fixed table and does **not** require a price provider.
 
 ## SRP Payout Calculations
 
@@ -50,6 +50,21 @@ Group rules match based on the group of the ship, such as `Frigate`, `Shuttle` o
 
 ##### Default Rule
 The default rule is the rule used when there are no type or group rules that have been triggered. The default rule is a catch all for any remaining payout calculations.
+
+### Flat / Matrix SRP (JDRC)
+
+Flat / Matrix mode pays a **fixed ISK amount** from a payout table defined in code, instead of pricing the killmail from market value. Enable it under **Settings → SRP Method → Flat / Matrix**. No price provider is required in this mode.
+
+The payout table lives in **`src/Config/srp.payouts.php`** — edit that file to change the corp's payouts. Each row combines a *meta tier* (T1, Logistics, T2/Faction, T3, Entosis, Pod) with a *hull type*, and holds two payout columns.
+
+When requesting, the pilot picks an **Operation Type**:
+
+- **Peacetime** → reads the *Peacetime* column.
+- **Strategic** → reads the *Strategic / FOB / Corp Op* column.
+
+The **ship class** (table row) is auto-detected from the killmail's hull, but the pilot can correct it — this is needed for cases that can't be detected from the hull alone: **T1 logistics** (same hull group as combat T1), **Entosis** (a fitted module, not a hull), and **Pod / implants**. Anything the classifier can't match falls back to an *Unclassified* row that pays 0 ISK and is decided manually.
+
+A payout of `0` (Entosis peacetime, Pod, Unclassified) means "no default — decide manually". **SRP admins can override the ISK amount** for any request on the Approval page.
 
 ## Discord Webhook (optional)
 

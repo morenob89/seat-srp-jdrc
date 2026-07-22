@@ -46,11 +46,22 @@ class SrpController extends Controller
             Detail::dispatchSync($killmail->killmail_id, $killmail->killmail_hash);
         }
 
+        // Flat / Matrix inputs (ignored by the simple/advanced modes). The
+        // operation-type column defaults to peacetime; the ship-class row is
+        // optional — when absent it is auto-classified from the hull.
+        $opType = $request->input('srpOpType', 'peacetime');
+        $rowKey = $request->input('srpClass');
+
         $totalKill = [];
 
-        $totalKill = array_merge($totalKill, $this->srpPopulateSlots($killmail));
+        $totalKill = array_merge($totalKill, $this->srpPopulateSlots($killmail, $opType, $rowKey));
         preg_match('/([a-z0-9]{35,42})/', $request->km, $tokens);
         $totalKill['killToken'] = $tokens[0];
+
+        // Surface the resolved classification so the request form can pre-select
+        // the auto-guessed ship-class row and show the chosen operation type.
+        $totalKill['srpClass'] = $totalKill['price']['srp_class'] ?? null;
+        $totalKill['srpType'] = $totalKill['price']['srp_type'] ?? $opType;
 
         return $totalKill;
     }
@@ -77,11 +88,17 @@ class SrpController extends Controller
             return redirect()->back()->with('error', $totalKill['price']['error']); // THIS DOESNT WORK!!
         }
 
-        $quote = Quote::firstOrCreate(
+        // updateOrCreate (not firstOrCreate) so re-verifying after changing the
+        // operation type or ship-class row refreshes the stored value/columns.
+        $quote = Quote::updateOrCreate(
             ['killmail_id' => $totalKill['killId']],
-            ['user' => $request->user()->id, 'value' => $totalKill['price']['price']]
+            [
+                'user' => $request->user()->id,
+                'value' => $totalKill['price']['price'],
+                'srp_type' => $totalKill['price']['srp_type'] ?? null,
+                'srp_class' => $totalKill['price']['srp_class'] ?? null,
+            ]
         );
-        $quote->update();
 
         $totalKill['quoteID'] = $quote->id;
 
@@ -105,6 +122,8 @@ class SrpController extends Controller
             'cost' => $quote->value,
             'type_id' => $request->input('srpTypeId'),
             'ship_type' => $request->input('srpShipType'),
+            'srp_type' => $quote->srp_type,
+            'srp_class' => $quote->srp_class,
         ]);
 
         if (! is_null($request->input('srpPingContent')) && $request->input('srpPingContent') != '')

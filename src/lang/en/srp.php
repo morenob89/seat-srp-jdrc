@@ -38,6 +38,11 @@ return [
     'add' => 'Add',
     'remove' => 'Remove',
 
+    'op_type' => 'Operation Type',
+    'ship_class' => 'Ship Class',
+    'ship_class_help' => 'Auto-detected on verify — change it if wrong; pick Pod or Entosis manually.',
+    'ship_class_auto' => 'Auto-detect from killmail',
+
     'low_slot_mod' => 'Low Slot Module',
     'mid_slot_mod' => 'Mid Slot Module',
     'hi_slot_mod' => 'High Slot Module',

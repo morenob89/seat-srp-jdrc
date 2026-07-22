@@ -27,7 +27,7 @@ class Quote extends Model
     protected $table = 'cryptatech_seat_quotes';
 
     protected $fillable = [
-        'killmail_id', 'user', 'value',
+        'killmail_id', 'user', 'value', 'srp_type', 'srp_class',
     ];
 
     public function killmail()

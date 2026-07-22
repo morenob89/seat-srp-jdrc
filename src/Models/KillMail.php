@@ -30,6 +30,7 @@ class KillMail extends Model
 
     protected $fillable = [
         'user_id', 'kill_id', 'character_name', 'kill_token', 'approved', 'cost', 'type_id', 'ship_type', 'approver',
+        'srp_type', 'srp_class',
     ];
 
     protected static function boot()
